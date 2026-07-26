@@ -7,341 +7,939 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-  .sidebar-link.active { background-color: #eff6ff; color: #1d4ed8; font-weight: 600; border-left: 3px solid #1d4ed8; }
+  .sidebar-link.active { background-color: #eff6ff; color: #1d4ed8; font-weight: 600; }
+  .sidebar-link.active .active-bar { opacity: 1; }
   ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
   .kb-table th { position: sticky; top: 0; }
   mark.hl { background-color: #fde68a; padding: 0 2px; border-radius: 2px; }
+  .cat-group.collapsed .cat-items { display: none; }
+  .cat-group .chevron { transition: transform .15s ease; }
+  .cat-group.collapsed .chevron { transform: rotate(-90deg); }
+  .star-btn { opacity: .35; }
+  .star-btn:hover, .star-btn.starred { opacity: 1; }
+  .code-tab-btn.active { background: #1e293b; color: #fff; }
+  .toc-link.active { color: #1d4ed8; font-weight: 600; border-left-color: #1d4ed8 !important; }
+  #searchResults { max-height: 70vh; overflow-y: auto; }
+
+  /* ---- Dark theme override layer ---- */
+  html.dark body { background: #0b1220; }
+  html.dark header, html.dark aside, html.dark .bg-white { background: #111827 !important; }
+  html.dark .bg-slate-50 { background: #0b1220 !important; }
+  html.dark .bg-slate-100 { background: #1e293b !important; }
+  html.dark .bg-slate-900 { background: #020617 !important; }
+  html.dark .border-slate-200, html.dark .border-slate-100 { border-color: #1f2937 !important; }
+  html.dark .border-slate-300 { border-color: #334155 !important; }
+  html.dark .text-slate-900 { color: #f1f5f9 !important; }
+  html.dark .text-slate-800, html.dark .text-slate-700 { color: #cbd5e1 !important; }
+  html.dark .text-slate-600, html.dark .text-slate-500 { color: #94a3b8 !important; }
+  html.dark .text-slate-400 { color: #64748b !important; }
+  html.dark .hover\:bg-slate-100:hover, html.dark .hover\:bg-slate-50:hover { background: #1e293b !important; }
+  html.dark .divide-slate-100 > * + * { border-color: #1f2937 !important; }
+  html.dark input, html.dark textarea, html.dark select { background: #1e293b !important; color: #e2e8f0 !important; border-color: #334155 !important; }
+  html.dark input::placeholder, html.dark textarea::placeholder { color: #64748b !important; }
+  html.dark code { background: #1e293b !important; color: #7dd3fc !important; }
+  html.dark .bg-blue-50 { background: #1e3a5f !important; color: #93c5fd !important; }
+  html.dark .bg-emerald-50 { background: #064e3b !important; color: #6ee7b7 !important; }
+  html.dark .bg-amber-50 { background: #451a03 !important; color: #fcd34d !important; }
+  html.dark .bg-red-50 { background: #450a0a !important; color: #fca5a5 !important; }
+  html.dark #searchResults, html.dark .toc-rail { background: #111827 !important; border-color: #1f2937 !important; }
+  html.dark ::-webkit-scrollbar-thumb { background: #334155; }
 </style>
 </head>
 <body class="bg-slate-50 text-slate-800">
 
 <!-- Top Bar -->
-<header class="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-30 flex items-center px-4 gap-4">
+<header class="fixed top-0 left-0 right-0 h-16 bg-white border-b border-slate-200 z-30 flex items-center px-4 gap-3">
   <div class="flex items-center gap-2 w-56 shrink-0">
     <div class="w-9 h-9 rounded-md bg-blue-700 text-white flex items-center justify-center font-bold text-lg">C</div>
     <div class="leading-tight">
       <div class="font-bold text-slate-900 text-sm">Home Lending</div>
       <div class="text-[11px] text-slate-500">Knowledge Portal</div>
     </div>
+    <span class="text-[10px] font-semibold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded ml-1">PROD</span>
   </div>
 
   <div class="flex-1 max-w-2xl relative">
     <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m1.35-5.15a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
     </span>
-    <input id="searchInput" type="text" placeholder="Search documents, fields, SOR mappings (e.g. 'FICO', 'Rate Lock', 'Encompass API')..."
-      class="w-full pl-9 pr-4 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-    <div id="searchStatus" class="hidden absolute -bottom-6 left-0 text-xs text-slate-500"></div>
+    <input id="searchInput" type="text" placeholder="Search documents, fields, SOR mappings... (Ctrl+K)"
+      class="w-full pl-9 pr-16 py-2 text-sm rounded-md border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+    <kbd class="hidden sm:block absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 border border-slate-300 rounded px-1.5 py-0.5">Ctrl K</kbd>
+    <div id="searchResults" class="hidden absolute top-11 left-0 right-0 bg-white border border-slate-200 rounded-md shadow-lg z-40"></div>
   </div>
 
-  <nav class="ml-auto hidden md:flex items-center gap-5 text-sm text-slate-600">
-    <a href="#" class="hover:text-blue-700">Spaces</a>
-    <a href="#" class="hover:text-blue-700">Recent</a>
-    <a href="#" class="hover:text-blue-700">Starred</a>
-    <div class="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center text-xs font-semibold">KA</div>
+  <nav class="ml-auto flex items-center gap-3 text-sm text-slate-600">
+    <select id="roleSelect" class="text-xs border border-slate-300 rounded-md px-2 py-1.5 bg-white">
+      <option value="architect">Enterprise Architect</option>
+      <option value="analyst">Business Analyst</option>
+      <option value="viewer">Viewer (Read-only)</option>
+    </select>
+    <button id="themeToggle" title="Toggle theme" class="w-9 h-9 rounded-md border border-slate-300 flex items-center justify-center hover:bg-slate-100">&#9788;</button>
+    <button title="Notifications" class="relative w-9 h-9 rounded-md border border-slate-300 flex items-center justify-center hover:bg-slate-100">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 00-4-5.65V5a2 2 0 10-4 0v.35A6 6 0 006 11v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      <span class="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] rounded-full w-4 h-4 flex items-center justify-center">3</span>
+    </button>
+    <a href="knowledge-graph.html" class="hidden md:inline-flex items-center gap-1 text-xs border border-slate-300 rounded-md px-3 py-2 hover:bg-slate-100">&#128279; Knowledge Graph</a>
+    <div class="w-8 h-8 rounded-full bg-slate-700 text-white flex items-center justify-center text-xs font-semibold" title="Kishore Kotha">KK</div>
   </nav>
 </header>
 
 <div class="flex pt-16">
 
   <!-- Sidebar -->
-  <aside class="fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-slate-200 overflow-y-auto py-4 hidden md:block">
-    <div class="px-4 mb-5">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">Business Channels</div>
-      <a data-doc="e2e" class="sidebar-link active flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100">
-        <span class="w-2 h-2 rounded-full bg-blue-600"></span> Consumer Lending
-      </a>
-      <a data-doc="correspondent" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100">
-        <span class="w-2 h-2 rounded-full bg-purple-600"></span> Correspondent Lending
-      </a>
+  <aside class="fixed top-16 left-0 bottom-0 w-64 bg-white border-r border-slate-200 overflow-y-auto py-4 hidden md:block text-sm">
+    <div id="favoritesSection" class="px-4 mb-5 hidden">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">&#9733; Favorites</div>
+      <div id="favoritesList"></div>
     </div>
 
-    <div class="px-4 mb-5">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">Systems of Record</div>
-      <a data-doc="encompass" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100">
-        <span class="w-2 h-2 rounded-full bg-emerald-600"></span> Encompass (LOS)
-      </a>
-      <a data-doc="cotality" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100">
-        <span class="w-2 h-2 rounded-full bg-amber-600"></span> Cotality (Pricing/Lock)
-      </a>
-      <a data-doc="lenderprice" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100">
-        <span class="w-2 h-2 rounded-full bg-rose-600"></span> Lender Price (PPE)
-      </a>
+    <div id="recentSection" class="px-4 mb-5 hidden">
+      <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">Recently Viewed</div>
+      <div id="recentList"></div>
     </div>
 
-    <div class="px-4 mb-5">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">Field Mappings</div>
-      <a data-doc="e2e" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100">
-        <span class="w-2 h-2 rounded-full bg-slate-400"></span> Loan Data Dictionary
-      </a>
+    <div class="cat-group px-4 mb-3" data-cat="channels">
+      <button class="cat-toggle w-full flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+        <span>Business Channels</span>
+        <svg class="chevron h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="cat-items" data-ids="consumer,correspondent"></div>
     </div>
 
-    <div class="px-4">
-      <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">Governance</div>
-      <a data-doc="governance" class="sidebar-link flex items-center gap-2 px-3 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100">
-        <span class="w-2 h-2 rounded-full bg-slate-400"></span> Data Stewardship & SLAs
-      </a>
+    <div class="cat-group px-4 mb-3" data-cat="systems">
+      <button class="cat-toggle w-full flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+        <span>Systems of Record</span>
+        <svg class="chevron h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="cat-items" data-ids="encompass,cotality,lenderprice"></div>
+    </div>
+
+    <div class="cat-group px-4 mb-3" data-cat="architecture">
+      <button class="cat-toggle w-full flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+        <span>Architecture</span>
+        <svg class="chevron h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="cat-items" data-ids="e2e"></div>
+    </div>
+
+    <div class="cat-group px-4 mb-3" data-cat="reference">
+      <button class="cat-toggle w-full flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+        <span>Reference</span>
+        <svg class="chevron h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="cat-items" data-ids="api-reference,changelog"></div>
+    </div>
+
+    <div class="cat-group px-4" data-cat="ops">
+      <button class="cat-toggle w-full flex items-center justify-between text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">
+        <span>Operations &amp; Governance</span>
+        <svg class="chevron h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <div class="cat-items" data-ids="runbook,governance"></div>
     </div>
   </aside>
 
-  <!-- Main Content -->
-  <main class="ml-0 md:ml-64 flex-1 px-6 py-8 max-w-5xl">
+  <!-- Main -->
+  <main class="ml-0 md:ml-64 flex-1 px-6 py-8">
+    <div class="flex gap-8 max-w-7xl mx-auto">
 
-    <div class="flex items-center gap-2 text-xs text-slate-500 mb-3">
-      <span>Home Lending</span><span>/</span><span>Architecture</span><span>/</span><span class="text-slate-700 font-medium">E2E Loan Origination Data Flow</span>
+      <div class="flex-1 max-w-3xl min-w-0">
+        <div id="breadcrumb" class="flex items-center gap-2 text-xs text-slate-500 mb-3 flex-wrap"></div>
+
+        <div id="articleContainer" class="bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
+
+          <article id="doc-e2e" class="doc-section" data-title="End-to-End Loan Origination Data Flow" data-category="architecture">
+            <h1 class="text-2xl font-bold text-slate-900">End-to-End Loan Origination Data Flow: Encompass ↔ Cotality ↔ Lender Price</h1>
+            <div class="meta-bar" data-meta-for="e2e"></div>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-e2e-1">1. Overview</h2>
+            <p class="text-sm leading-relaxed text-slate-700 mb-4">
+              This document defines the canonical data flow for a residential mortgage loan file from initial product/pricing selection
+              through rate lock confirmation and core loan boarding. Three systems of record participate: <strong>Lender Price</strong> (product
+              eligibility and pricing engine, "PPE"), <strong>Cotality</strong> (secondary marketing pricing and lock desk system, formerly CoreLogic
+              pricing/locking services), and <strong>Encompass</strong> (Ellie Mae/ICE Mortgage Technology core Loan Origination System, "LOS").
+              Consumer Lending originates loans directly via retail/digital channels into Encompass; Correspondent Lending ingests
+              closed/delegated loan files from correspondent sellers, reconciling pricing and lock data against the same Cotality/Lender
+              Price backbone before boarding into Encompass.
+            </p>
+            <a class="text-xs text-blue-700 underline" href="knowledge-graph.html?focus=encompass" target="_blank">View this topology in the interactive Knowledge Graph &rarr;</a>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-e2e-2">2. Sequence of Record</h2>
+            <ol class="list-decimal list-inside text-sm text-slate-700 space-y-2 mb-4">
+              <li><strong>Product Eligibility &amp; Initial Pricing (Lender Price):</strong> Loan officer or borrower-facing digital app submits a pricing request (loan amount, FICO, LTV, occupancy, property type, state) to Lender Price via REST API. Lender Price returns eligible products, note rates, and rebate/points across investor overlays.</li>
+              <li><strong>Product Selection Feed to Encompass:</strong> Selected product/pricing scenario is written back to Encompass loan fields via the Encompass Developer Connect (EDC) API, populating the 3.4 pricing fields and custom fields (CX.*).</li>
+              <li><strong>Lock Request Routing (Cotality):</strong> When the borrower/LO requests a lock, Encompass triggers a lock request event (via Encompass Business Events + webhook) to Cotality's lock desk API, carrying the Lender Price product ID, rate, and lock period.</li>
+              <li><strong>Lock Confirmation Push:</strong> Cotality validates against current secondary market pricing, confirms (or re-prices) the lock, and pushes the confirmed locked rate, lock expiration date, and investor commitment ID back into Encompass via SOAP/REST integration on a scheduled 15-minute polling interval plus real-time webhook on status change.</li>
+              <li><strong>Underwriting Handoff:</strong> Encompass exposes the fully priced and locked loan file to underwriting/AUS (DU/LPA) and downstream conditions engines.</li>
+              <li><strong>Correspondent Variant:</strong> For Correspondent Lending, the seller's closed loan file (ULDD/MISMO 3.4 XML) is ingested into Encompass via the Correspondent Import Service; pricing/lock data is reconciled against Cotality's investor commitment record rather than generated fresh, with exceptions routed to a pricing analyst queue.</li>
+            </ol>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-e2e-3">3. System Interaction Diagram</h2>
+            <div class="border border-slate-200 rounded-md p-4 mb-4 bg-slate-50 overflow-x-auto">
+              <svg viewBox="0 0 760 260" class="w-full min-w-[640px]" style="max-height:280px;">
+                <defs>
+                  <marker id="e2e-arrow" markerWidth="8" markerHeight="8" refX="7" refY="2.5" orient="auto"><path d="M0,0 L0,5 L7,2.5 z" fill="#475569"/></marker>
+                </defs>
+                <g font-family="inherit" font-size="12" fill="#334155">
+                  <rect x="20" y="20" width="150" height="46" rx="6" fill="#ede9fe" stroke="#8b5cf6"/>
+                  <text x="95" y="47" text-anchor="middle" font-weight="600">Consumer /</text>
+                  <text x="95" y="60" text-anchor="middle" font-weight="600" font-size="10.5">Correspondent</text>
+
+                  <rect x="20" y="150" width="150" height="46" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+                  <text x="95" y="178" text-anchor="middle" font-weight="600">Lender Price</text>
+
+                  <rect x="305" y="85" width="150" height="46" rx="6" fill="#d1fae5" stroke="#10b981"/>
+                  <text x="380" y="113" text-anchor="middle" font-weight="600">Encompass</text>
+
+                  <rect x="590" y="20" width="150" height="46" rx="6" fill="#d1fae5" stroke="#10b981"/>
+                  <text x="665" y="47" text-anchor="middle" font-weight="600">Cotality</text>
+
+                  <rect x="305" y="200" width="150" height="46" rx="6" fill="#e2e8f0" stroke="#64748b"/>
+                  <text x="380" y="228" text-anchor="middle" font-weight="600">Underwriting / AUS</text>
+
+                  <path d="M170 43 L303 100" stroke="#475569" fill="none" marker-end="url(#e2e-arrow)"/>
+                  <text x="200" y="65" font-size="10.5">Originates In</text>
+
+                  <path d="M170 173 L303 118" stroke="#475569" fill="none" marker-end="url(#e2e-arrow)"/>
+                  <text x="195" y="160" font-size="10.5">Feeds Eligibility</text>
+
+                  <path d="M455 95 L588 55" stroke="#475569" fill="none" marker-end="url(#e2e-arrow)"/>
+                  <text x="470" y="65" font-size="10.5">Sends Lock Request</text>
+
+                  <path d="M588 62 L457 108" stroke="#475569" fill="none" marker-end="url(#e2e-arrow)"/>
+                  <text x="530" y="130" font-size="10.5">Pushes Locked Rate</text>
+
+                  <path d="M380 131 L380 198" stroke="#475569" fill="none" marker-end="url(#e2e-arrow)"/>
+                  <text x="388" y="168" font-size="10.5">Boards Loan</text>
+                </g>
+              </svg>
+            </div>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-e2e-4">4. Cross-System Field Mapping</h2>
+            <p class="text-sm text-slate-700 mb-3">Canonical field mapping across the three SORs. Field IDs shown for Encompass reflect standard Encompass field ID convention.</p>
+            <div class="overflow-x-auto mb-6 border border-slate-200 rounded-md">
+              <table class="kb-table w-full text-xs text-left">
+                <thead class="bg-slate-100 text-slate-600 uppercase tracking-wide">
+                  <tr>
+                    <th class="px-3 py-2 border-b border-slate-200">Business Field</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Encompass Field ID</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Lender Price API Field</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Cotality Field</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Data Type</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Loan Amount</td><td class="px-3 py-2 font-mono">Field 1109</td><td class="px-3 py-2 font-mono">loanAmount</td><td class="px-3 py-2 font-mono">loan_amt</td><td class="px-3 py-2">Decimal(12,2)</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">FICO (Representative)</td><td class="px-3 py-2 font-mono">Field 1109 / CX.FICO.REP</td><td class="px-3 py-2 font-mono">creditScore</td><td class="px-3 py-2 font-mono">fico_repr</td><td class="px-3 py-2">Integer</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Debt-to-Income (DTI)</td><td class="px-3 py-2 font-mono">Field 353 (Back-End)</td><td class="px-3 py-2 font-mono">dtiRatio</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Decimal(5,2)</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Loan-to-Value (LTV)</td><td class="px-3 py-2 font-mono">Field 353</td><td class="px-3 py-2 font-mono">ltvRatio</td><td class="px-3 py-2 font-mono">ltv_pct</td><td class="px-3 py-2">Decimal(5,2)</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Note Rate</td><td class="px-3 py-2 font-mono">Field 3</td><td class="px-3 py-2 font-mono">noteRate</td><td class="px-3 py-2 font-mono">locked_rate</td><td class="px-3 py-2">Decimal(5,3)</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Pricing Tier / Investor</td><td class="px-3 py-2 font-mono">CX.INVESTOR.CODE</td><td class="px-3 py-2 font-mono">investorId</td><td class="px-3 py-2 font-mono">investor_commitment_id</td><td class="px-3 py-2">String(20)</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Lock Period (Days)</td><td class="px-3 py-2 font-mono">Field 3140</td><td class="px-3 py-2 font-mono">lockPeriodDays</td><td class="px-3 py-2 font-mono">lock_term_days</td><td class="px-3 py-2">Integer</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Lock Expiration Date</td><td class="px-3 py-2 font-mono">Field 3143</td><td class="px-3 py-2 font-mono">n/a</td><td class="px-3 py-2 font-mono">lock_exp_date</td><td class="px-3 py-2">Date (ISO-8601)</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Rebate / Points</td><td class="px-3 py-2 font-mono">Field 815</td><td class="px-3 py-2 font-mono">rebatePoints</td><td class="px-3 py-2 font-mono">rebate_pts</td><td class="px-3 py-2">Decimal(6,3)</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Occupancy Type</td><td class="px-3 py-2 font-mono">Field 1811</td><td class="px-3 py-2 font-mono">occupancyType</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Enum</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Property Type</td><td class="px-3 py-2 font-mono">Field 1041</td><td class="px-3 py-2 font-mono">propertyType</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Enum</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Loan Purpose</td><td class="px-3 py-2 font-mono">Field 19</td><td class="px-3 py-2 font-mono">loanPurpose</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Enum</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">AUS Recommendation</td><td class="px-3 py-2 font-mono">Field VASUMM.X29</td><td class="px-3 py-2 font-mono">n/a</td><td class="px-3 py-2 font-mono">n/a</td><td class="px-3 py-2">Enum (DU/LPA)</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-e2e-5">5. Integration Endpoints</h2>
+            <div class="overflow-x-auto mb-6 border border-slate-200 rounded-md">
+              <table class="kb-table w-full text-xs text-left">
+                <thead class="bg-slate-100 text-slate-600 uppercase tracking-wide">
+                  <tr>
+                    <th class="px-3 py-2 border-b border-slate-200">Integration</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Protocol</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Endpoint (Mock)</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Frequency</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Format</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">LP → Encompass Product Feed</td><td class="px-3 py-2">REST/HTTPS</td><td class="px-3 py-2 font-mono">/api/v2/pricing/eligibility</td><td class="px-3 py-2">Real-time (on request)</td><td class="px-3 py-2">JSON</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Encompass → Cotality Lock Request</td><td class="px-3 py-2">REST Webhook</td><td class="px-3 py-2 font-mono">/lockdesk/v1/lock-requests</td><td class="px-3 py-2">Real-time (event-driven)</td><td class="px-3 py-2">JSON</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Cotality → Encompass Lock Confirm</td><td class="px-3 py-2">SOAP/REST hybrid</td><td class="px-3 py-2 font-mono">/api/EllieMae/EDC/loans/{id}</td><td class="px-3 py-2">15-min poll + webhook</td><td class="px-3 py-2">XML/JSON</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Correspondent Loan Import</td><td class="px-3 py-2">SFTP + REST</td><td class="px-3 py-2 font-mono">/correspondent/v1/import</td><td class="px-3 py-2">Batch (hourly)</td><td class="px-3 py-2">MISMO 3.4 XML</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="text-xs text-slate-500 mb-4">Full request/response payload samples: see <button class="text-blue-700 underline" onclick="showDoc('api-reference')">Integration API Reference</button>.</p>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-e2e-6">6. Exception Handling</h2>
+            <p class="text-sm leading-relaxed text-slate-700">
+              Pricing mismatches between Lender Price's quoted rate and Cotality's confirmed lock (tolerance &gt; 0.125 bps) trigger a
+              <code class="bg-slate-100 px-1 rounded">PRICE_EXCEPTION</code> event routed to the Secondary Marketing exception queue. FICO or DTI
+              deltas discovered post-lock (re-verification) trigger a <code class="bg-slate-100 px-1 rounded">RELOCK_REQUIRED</code> workflow in
+              Encompass, invalidating the current Cotality investor commitment and re-initiating step 1. Full escalation paths: see
+              <button class="text-blue-700 underline" onclick="showDoc('runbook')">Incident Runbook</button>.
+            </p>
+
+            <div class="feedback-widget mt-8" data-feedback="e2e"></div>
+            <div class="comments-section mt-6" data-comments="e2e"></div>
+          </article>
+
+          <article id="doc-consumer" class="doc-section hidden" data-title="Consumer Lending Channel Guide" data-category="channels">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">Consumer Lending Channel Guide</h1>
+            <div class="meta-bar" data-meta-for="consumer"></div>
+            <p class="text-sm leading-relaxed text-slate-700 mb-4">
+              Consumer Lending covers retail branch and direct-to-consumer digital origination. Borrowers or loan officers initiate
+              applications through the Chase MyHome digital portal or branch-based Encompass workstations. All product eligibility and
+              pricing calls originate from the borrower-facing UI directly against Lender Price, with results streamed into Encompass
+              in real time.
+            </p>
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-consumer-1">Key Characteristics</h2>
+            <ul class="list-disc list-inside text-sm text-slate-700 space-y-1 mb-4">
+              <li>Loan officer assisted or self-service digital application intake (1003/URLA).</li>
+              <li>Real-time pricing refresh every time a material loan characteristic changes (loan amount, FICO tier, LTV band).</li>
+              <li>Lock requests initiated directly from the Encompass Pipeline UI, routed automatically to Cotality.</li>
+              <li>SLA: Pricing eligibility response &lt; 2s; lock confirmation &lt; 5 min during market hours.</li>
+            </ul>
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-consumer-2">Related</h2>
+            <p class="text-sm text-slate-700">See <button class="text-blue-700 underline" onclick="showDoc('e2e')">E2E Loan Origination Data Flow</button> for the full field mapping table, or the
+              <a class="text-blue-700 underline" href="knowledge-graph.html?focus=consumer" target="_blank">interactive graph node</a>.</p>
+            <div class="feedback-widget mt-8" data-feedback="consumer"></div>
+            <div class="comments-section mt-6" data-comments="consumer"></div>
+          </article>
+
+          <article id="doc-correspondent" class="doc-section hidden" data-title="Correspondent Lending Channel Guide" data-category="channels">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">Correspondent Lending Channel Guide</h1>
+            <div class="meta-bar" data-meta-for="correspondent"></div>
+            <p class="text-sm leading-relaxed text-slate-700 mb-4">
+              Correspondent Lending purchases closed, funded loans from approved correspondent sellers. Loans arrive as MISMO 3.4 XML
+              packages via SFTP and are ingested through the Correspondent Import Service into Encompass. Because the loan is already
+              priced and locked by the seller, Cotality performs a reconciliation pass against the seller's stated pricing rather than
+              generating an original quote.
+            </p>
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-corr-1">Key Characteristics</h2>
+            <ul class="list-disc list-inside text-sm text-slate-700 space-y-1 mb-4">
+              <li>Batch ingestion cadence: hourly import windows, 06:00–20:00 ET.</li>
+              <li>Pricing reconciliation tolerance: 0.125 bps before manual exception review.</li>
+              <li>Lender Price used for post-purchase eligibility audit, not original quoting.</li>
+              <li>SLA: Import-to-board cycle time &lt; 4 business hours.</li>
+            </ul>
+            <div class="feedback-widget mt-8" data-feedback="correspondent"></div>
+            <div class="comments-section mt-6" data-comments="correspondent"></div>
+          </article>
+
+          <article id="doc-encompass" class="doc-section hidden" data-title="System Profile: Encompass (Core LOS)" data-category="systems">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">System Profile: Encompass (Core LOS)</h1>
+            <div class="meta-bar" data-meta-for="encompass"></div>
+            <table class="text-sm mb-4">
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Vendor</td><td>ICE Mortgage Technology</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Role</td><td>System of Record for the loan file, disclosures, conditions, and closing</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Integration Layer</td><td>Encompass Developer Connect (EDC) / Encompass Partner Connect (EPC)</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Auth</td><td>OAuth 2.0 Client Credentials</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Primary Consumers</td><td>Underwriting, Closing, Post-Closing, Servicing Boarding</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Environment</td><td>PROD (us-east-1) &middot; UAT &middot; Sandbox</td></tr>
+            </table>
+            <p class="text-sm text-slate-700 mb-3">Encompass is the golden source for the borrower loan file (Field IDs 1–4999 standard, 5000+ custom CX fields). All downstream boarding to servicing systems reads from the final "Clear to Close" snapshot.</p>
+            <a class="text-xs text-blue-700 underline" href="knowledge-graph.html?focus=encompass" target="_blank">View in Knowledge Graph &rarr;</a>
+            <div class="feedback-widget mt-8" data-feedback="encompass"></div>
+            <div class="comments-section mt-6" data-comments="encompass"></div>
+          </article>
+
+          <article id="doc-cotality" class="doc-section hidden" data-title="System Profile: Cotality (Pricing & Locking)" data-category="systems">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">System Profile: Cotality (Pricing & Locking)</h1>
+            <div class="meta-bar" data-meta-for="cotality"></div>
+            <table class="text-sm mb-4">
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Vendor</td><td>Cotality (formerly CoreLogic)</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Role</td><td>Secondary marketing pricing engine and rate-lock desk of record</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Integration Layer</td><td>Cotality Lock Desk API (REST) + legacy SOAP adapter</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Auth</td><td>Mutual TLS + API Key</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Primary Consumers</td><td>Secondary Marketing, Capital Markets, Encompass Lock Object</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Environment</td><td>PROD (us-east-1) &middot; UAT</td></tr>
+            </table>
+            <p class="text-sm text-slate-700 mb-3">Cotality owns the investor commitment ledger and is the authoritative source for locked rate, lock expiration, and pair-off/extension events.</p>
+            <a class="text-xs text-blue-700 underline" href="knowledge-graph.html?focus=cotality" target="_blank">View in Knowledge Graph &rarr;</a>
+            <div class="feedback-widget mt-8" data-feedback="cotality"></div>
+            <div class="comments-section mt-6" data-comments="cotality"></div>
+          </article>
+
+          <article id="doc-lenderprice" class="doc-section hidden" data-title="System Profile: Lender Price (Product & Pricing Engine)" data-category="systems">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">System Profile: Lender Price (Product & Pricing Engine)</h1>
+            <div class="meta-bar" data-meta-for="lenderprice"></div>
+            <table class="text-sm mb-4">
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Vendor</td><td>Lender Price</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Role</td><td>Product eligibility, initial pricing, and rate sheet management</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Integration Layer</td><td>Lender Price REST API v2</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Auth</td><td>OAuth 2.0 Bearer Token</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Primary Consumers</td><td>Digital Point-of-Sale, Encompass Pricing Object, Correspondent Audit</td></tr>
+              <tr><td class="pr-4 py-1 font-medium text-slate-600">Environment</td><td>PROD (us-east-1)</td></tr>
+            </table>
+            <p class="text-sm text-slate-700 mb-3">Lender Price maintains the master investor overlay rules and rate sheets; every pricing scenario returns an eligible product set with associated note rate and rebate/point combinations.</p>
+            <a class="text-xs text-blue-700 underline" href="knowledge-graph.html?focus=lenderprice" target="_blank">View in Knowledge Graph &rarr;</a>
+            <div class="feedback-widget mt-8" data-feedback="lenderprice"></div>
+            <div class="comments-section mt-6" data-comments="lenderprice"></div>
+          </article>
+
+          <article id="doc-api-reference" class="doc-section hidden" data-title="Integration API Reference" data-category="reference">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">Integration API Reference</h1>
+            <div class="meta-bar" data-meta-for="api-reference"></div>
+            <p class="text-sm leading-relaxed text-slate-700 mb-6">Sample requests and responses for the three primary system integrations. All payloads shown are illustrative/sanitized — not representative of production PII.</p>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-api-1">Lender Price — Pricing Eligibility</h2>
+            <div class="code-tabs border border-slate-200 rounded-md overflow-hidden mb-6" data-group="lp">
+              <div class="flex bg-slate-100 text-xs">
+                <button class="code-tab-btn active px-3 py-2" data-target="lp-curl">cURL</button>
+                <button class="code-tab-btn px-3 py-2" data-target="lp-req">Request JSON</button>
+                <button class="code-tab-btn px-3 py-2" data-target="lp-res">Response JSON</button>
+              </div>
+              <pre id="lp-curl" class="code-panel bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">curl -X POST https://api.lenderprice.com/v2/pricing/eligibility \
+  -H "Authorization: Bearer $LP_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"loanAmount":420000,"creditScore":742,"ltvRatio":80.0,"occupancyType":"PRIMARY","state":"NJ"}'</pre>
+              <pre id="lp-req" class="code-panel hidden bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">{
+  "loanAmount": 420000,
+  "creditScore": 742,
+  "dtiRatio": 34.2,
+  "ltvRatio": 80.0,
+  "occupancyType": "PRIMARY",
+  "propertyType": "SFR",
+  "loanPurpose": "PURCHASE",
+  "state": "NJ"
+}</pre>
+              <pre id="lp-res" class="code-panel hidden bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">{
+  "products": [
+    {
+      "investorId": "FNMA-30YR-STD",
+      "noteRate": 6.375,
+      "rebatePoints": 0.482,
+      "lockPeriodDays": 30
+    },
+    {
+      "investorId": "FHLMC-30YR-STD",
+      "noteRate": 6.5,
+      "rebatePoints": 0.915,
+      "lockPeriodDays": 30
+    }
+  ],
+  "requestId": "lp-req-9f21a3"
+}</pre>
+            </div>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-api-2">Cotality — Lock Request &amp; Confirmation</h2>
+            <div class="code-tabs border border-slate-200 rounded-md overflow-hidden mb-6" data-group="cot">
+              <div class="flex bg-slate-100 text-xs">
+                <button class="code-tab-btn active px-3 py-2" data-target="cot-curl">cURL</button>
+                <button class="code-tab-btn px-3 py-2" data-target="cot-req">Request JSON</button>
+                <button class="code-tab-btn px-3 py-2" data-target="cot-res">Response JSON</button>
+              </div>
+              <pre id="cot-curl" class="code-panel bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">curl -X POST https://api.cotality.com/lockdesk/v1/lock-requests \
+  --cert client.pem --key client.key \
+  -H "x-api-key: $COTALITY_KEY" \
+  -d '{"loanId":"ENC-2026-118820","investorId":"FNMA-30YR-STD","noteRate":6.375,"lockPeriodDays":30}'</pre>
+              <pre id="cot-req" class="code-panel hidden bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">{
+  "loanId": "ENC-2026-118820",
+  "investorId": "FNMA-30YR-STD",
+  "noteRate": 6.375,
+  "lockPeriodDays": 30,
+  "requestedBy": "LO-88213"
+}</pre>
+              <pre id="cot-res" class="code-panel hidden bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">{
+  "lockId": "COT-LK-773401",
+  "status": "CONFIRMED",
+  "lockedRate": 6.375,
+  "investorCommitmentId": "IC-2026-55123",
+  "lockExpirationDate": "2026-08-25"
+}</pre>
+            </div>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-api-3">Encompass — Loan Object Read</h2>
+            <div class="code-tabs border border-slate-200 rounded-md overflow-hidden mb-4" data-group="enc">
+              <div class="flex bg-slate-100 text-xs">
+                <button class="code-tab-btn active px-3 py-2" data-target="enc-curl">cURL</button>
+                <button class="code-tab-btn px-3 py-2" data-target="enc-res">Response JSON</button>
+              </div>
+              <pre id="enc-curl" class="code-panel bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">curl -X GET https://api.elliemae.com/encompass/v3/loans/ENC-2026-118820 \
+  -H "Authorization: Bearer $EDC_TOKEN"</pre>
+              <pre id="enc-res" class="code-panel hidden bg-slate-900 text-slate-100 text-xs p-4 overflow-x-auto m-0">{
+  "loanNumber": "ENC-2026-118820",
+  "fields": {
+    "1109": 420000,
+    "353": 34.2,
+    "3": 6.375,
+    "3140": 30,
+    "3143": "2026-08-25",
+    "CX.INVESTOR.CODE": "FNMA-30YR-STD"
+  }
+}</pre>
+            </div>
+
+            <div class="feedback-widget mt-8" data-feedback="api-reference"></div>
+            <div class="comments-section mt-6" data-comments="api-reference"></div>
+          </article>
+
+          <article id="doc-changelog" class="doc-section hidden" data-title="Platform Change Log" data-category="reference">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">Platform Change Log</h1>
+            <div class="meta-bar" data-meta-for="changelog"></div>
+            <div class="overflow-x-auto mb-6 border border-slate-200 rounded-md">
+              <table class="kb-table w-full text-xs text-left">
+                <thead class="bg-slate-100 text-slate-600 uppercase tracking-wide">
+                  <tr>
+                    <th class="px-3 py-2 border-b border-slate-200">Date</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Version</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Area</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Change</th>
+                    <th class="px-3 py-2 border-b border-slate-200">Author</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2">2026-07-25</td><td class="px-3 py-2 font-mono">3.2</td><td class="px-3 py-2">E2E Data Flow</td><td class="px-3 py-2">Added correspondent reconciliation tolerance detail (0.125 bps).</td><td class="px-3 py-2">E. Ramirez</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2">2026-07-20</td><td class="px-3 py-2 font-mono">1.4</td><td class="px-3 py-2">API Reference</td><td class="px-3 py-2">Added Encompass Loan Object Read sample.</td><td class="px-3 py-2">S. Patel</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2">2026-07-14</td><td class="px-3 py-2 font-mono">3.1</td><td class="px-3 py-2">E2E Data Flow</td><td class="px-3 py-2">Clarified Cotality poll interval vs. webhook trigger behavior.</td><td class="px-3 py-2">E. Ramirez</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2">2026-06-30</td><td class="px-3 py-2 font-mono">2.1</td><td class="px-3 py-2">Consumer Channel</td><td class="px-3 py-2">Updated SLA thresholds for pricing/lock response times.</td><td class="px-3 py-2">M. Chen</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2">2026-06-18</td><td class="px-3 py-2 font-mono">1.2</td><td class="px-3 py-2">Governance</td><td class="px-3 py-2">Added RBAC permissions matrix.</td><td class="px-3 py-2">A. Novak</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2">2026-05-22</td><td class="px-3 py-2 font-mono">4.0</td><td class="px-3 py-2">Encompass Profile</td><td class="px-3 py-2">Major rewrite for EDC/EPC integration layer naming.</td><td class="px-3 py-2">S. Patel</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="feedback-widget mt-8" data-feedback="changelog"></div>
+          </article>
+
+          <article id="doc-runbook" class="doc-section hidden" data-title="Incident Runbook: Pricing & Lock Exceptions" data-category="ops">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">Incident Runbook: Pricing &amp; Lock Exceptions</h1>
+            <div class="meta-bar" data-meta-for="runbook"></div>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-run-1">Severity Matrix</h2>
+            <div class="overflow-x-auto mb-6 border border-slate-200 rounded-md">
+              <table class="kb-table w-full text-xs text-left">
+                <thead class="bg-slate-100 text-slate-600 uppercase tracking-wide">
+                  <tr><th class="px-3 py-2 border-b border-slate-200">Severity</th><th class="px-3 py-2 border-b border-slate-200">Example</th><th class="px-3 py-2 border-b border-slate-200">Response SLA</th><th class="px-3 py-2 border-b border-slate-200">Escalation</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-semibold text-red-600">SEV-1</td><td class="px-3 py-2">Cotality lock confirmation feed down enterprise-wide</td><td class="px-3 py-2">15 minutes</td><td class="px-3 py-2">Secondary Marketing Tech on-call + Enterprise Data Architecture</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-semibold text-amber-600">SEV-2</td><td class="px-3 py-2">Pricing mismatch &gt; 0.125 bps on a single loan</td><td class="px-3 py-2">2 hours</td><td class="px-3 py-2">Pricing Analyst Queue</td></tr>
+                  <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-semibold text-slate-600">SEV-3</td><td class="px-3 py-2">Correspondent batch import delay &lt; 1 hour</td><td class="px-3 py-2">Next business day</td><td class="px-3 py-2">Correspondent Lending Ops</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-run-2">Response Steps: PRICE_EXCEPTION</h2>
+            <ol class="list-decimal list-inside text-sm text-slate-700 space-y-2 mb-4">
+              <li>Confirm the exception in the Secondary Marketing exception queue and pull the loan's Lender Price quote ID and Cotality lock ID.</li>
+              <li>Compare <code class="bg-slate-100 px-1 rounded">noteRate</code> (Lender Price) against <code class="bg-slate-100 px-1 rounded">locked_rate</code> (Cotality) for the same investor commitment.</li>
+              <li>If delta &gt; 0.125 bps and lock is not yet confirmed, cancel the pending lock request and re-submit from Encompass.</li>
+              <li>If delta is discovered post-confirmation, open a <code class="bg-slate-100 px-1 rounded">RELOCK_REQUIRED</code> case and notify the assigned loan officer.</li>
+              <li>Log resolution in the exception queue with root cause (rate sheet timing, stale cache, manual override).</li>
+            </ol>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-run-3">Escalation Contacts</h2>
+            <ul class="list-disc list-inside text-sm text-slate-700 space-y-1">
+              <li>Secondary Marketing Technology On-Call — PagerDuty rotation "cotality-lockdesk"</li>
+              <li>Capital Markets Technology On-Call — PagerDuty rotation "lenderprice-ppe"</li>
+              <li>LOS Platform Engineering On-Call — PagerDuty rotation "encompass-core"</li>
+              <li>Enterprise Data Architecture — escalate SEV-1 within 15 minutes per governance SLA</li>
+            </ul>
+            <div class="feedback-widget mt-8" data-feedback="runbook"></div>
+            <div class="comments-section mt-6" data-comments="runbook"></div>
+          </article>
+
+          <article id="doc-governance" class="doc-section hidden" data-title="Data Stewardship & SLAs" data-category="ops">
+            <h1 class="text-2xl font-bold text-slate-900 mb-2">Data Stewardship &amp; SLAs</h1>
+            <div class="meta-bar" data-meta-for="governance"></div>
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-gov-1">Ownership</h2>
+            <ul class="list-disc list-inside text-sm text-slate-700 space-y-1 mb-6">
+              <li>Encompass: System of record for loan file &amp; disclosures — Owner: LOS Platform Engineering.</li>
+              <li>Cotality: System of record for locked rate &amp; investor commitment — Owner: Secondary Marketing Technology.</li>
+              <li>Lender Price: System of record for product eligibility &amp; rate sheets — Owner: Capital Markets Technology.</li>
+              <li>Field-level data quality exceptions escalate to the Enterprise Data Architecture team within 1 business day.</li>
+            </ul>
+
+            <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2" id="h-gov-2">Access Control Matrix (RBAC)</h2>
+            <p class="text-sm text-slate-700 mb-3">Your current role is highlighted below. Switch roles from the header selector to preview access.</p>
+            <div class="overflow-x-auto mb-4 border border-slate-200 rounded-md">
+              <table id="rbacTable" class="kb-table w-full text-xs text-left">
+                <thead class="bg-slate-100 text-slate-600 uppercase tracking-wide">
+                  <tr><th class="px-3 py-2 border-b border-slate-200">Role</th><th class="px-3 py-2 border-b border-slate-200">View Docs</th><th class="px-3 py-2 border-b border-slate-200">Comment</th><th class="px-3 py-2 border-b border-slate-200">Approve &amp; Publish</th><th class="px-3 py-2 border-b border-slate-200">Manage Access</th></tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                  <tr class="hover:bg-slate-50" data-role-row="architect"><td class="px-3 py-2 font-medium">Enterprise Architect</td><td class="px-3 py-2 text-emerald-600">&#10003;</td><td class="px-3 py-2 text-emerald-600">&#10003;</td><td class="px-3 py-2 text-emerald-600">&#10003;</td><td class="px-3 py-2 text-emerald-600">&#10003;</td></tr>
+                  <tr class="hover:bg-slate-50" data-role-row="analyst"><td class="px-3 py-2 font-medium">Business Analyst</td><td class="px-3 py-2 text-emerald-600">&#10003;</td><td class="px-3 py-2 text-emerald-600">&#10003;</td><td class="px-3 py-2 text-slate-400">&#10007;</td><td class="px-3 py-2 text-slate-400">&#10007;</td></tr>
+                  <tr class="hover:bg-slate-50" data-role-row="viewer"><td class="px-3 py-2 font-medium">Viewer (Read-only)</td><td class="px-3 py-2 text-emerald-600">&#10003;</td><td class="px-3 py-2 text-slate-400">&#10007;</td><td class="px-3 py-2 text-slate-400">&#10007;</td><td class="px-3 py-2 text-slate-400">&#10007;</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="feedback-widget mt-8" data-feedback="governance"></div>
+            <div class="comments-section mt-6" data-comments="governance"></div>
+          </article>
+
+        </div>
+      </div>
+
+      <aside class="hidden xl:block w-56 shrink-0">
+        <div class="sticky top-20 toc-rail bg-white border border-slate-200 rounded-lg p-4">
+          <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-2">On This Page</div>
+          <div id="tocList" class="text-xs space-y-1"></div>
+        </div>
+      </aside>
+
     </div>
-
-    <article id="doc-e2e" class="doc-section bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
-      <div class="flex items-start justify-between mb-2">
-        <h1 class="text-2xl font-bold text-slate-900">End-to-End Loan Origination Data Flow: Encompass ↔ Cotality ↔ Lender Price</h1>
-        <span class="text-[11px] bg-blue-50 text-blue-700 px-2 py-1 rounded font-medium whitespace-nowrap">Owner: Enterprise Data Architecture</span>
-      </div>
-      <div class="text-xs text-slate-500 mb-6">Last updated 2026-07-14 &middot; Version 3.2 &middot; Channels: Consumer, Correspondent</div>
-
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">1. Overview</h2>
-      <p class="text-sm leading-relaxed text-slate-700 mb-4">
-        This document defines the canonical data flow for a residential mortgage loan file from initial product/pricing selection
-        through rate lock confirmation and core loan boarding. Three systems of record participate: <strong>Lender Price</strong> (product
-        eligibility and pricing engine, "PPE"), <strong>Cotality</strong> (secondary marketing pricing and lock desk system, formerly CoreLogic
-        pricing/locking services), and <strong>Encompass</strong> (Ellie Mae/ICE Mortgage Technology core Loan Origination System, "LOS").
-        Consumer Lending originates loans directly via retail/digital channels into Encompass; Correspondent Lending ingests
-        closed/delegated loan files from correspondent sellers, reconciling pricing and lock data against the same Cotality/Lender
-        Price backbone before boarding into Encompass.
-      </p>
-
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">2. Sequence of Record</h2>
-      <ol class="list-decimal list-inside text-sm text-slate-700 space-y-2 mb-4">
-        <li><strong>Product Eligibility &amp; Initial Pricing (Lender Price):</strong> Loan officer or borrower-facing digital app submits a pricing request (loan amount, FICO, LTV, occupancy, property type, state) to Lender Price via REST API. Lender Price returns eligible products, note rates, and rebate/points across investor overlays.</li>
-        <li><strong>Product Selection Feed to Encompass:</strong> Selected product/pricing scenario is written back to Encompass loan fields via the Encompass Developer Connect (EDC) API, populating the 3.4 pricing fields and custom fields (CX.*).</li>
-        <li><strong>Lock Request Routing (Cotality):</strong> When the borrower/LO requests a lock, Encompass triggers a lock request event (via Encompass Business Events + webhook) to Cotality's lock desk API, carrying the Lender Price product ID, rate, and lock period.</li>
-        <li><strong>Lock Confirmation Push:</strong> Cotality validates against current secondary market pricing, confirms (or re-prices) the lock, and pushes the confirmed locked rate, lock expiration date, and investor commitment ID back into Encompass via SOAP/REST integration on a scheduled 15-minute polling interval plus real-time webhook on status change.</li>
-        <li><strong>Underwriting Handoff:</strong> Encompass exposes the fully priced and locked loan file to underwriting/AUS (DU/LPA) and downstream conditions engines.</li>
-        <li><strong>Correspondent Variant:</strong> For Correspondent Lending, the seller's closed loan file (ULDD/MISMO 3.4 XML) is ingested into Encompass via the Correspondent Import Service; pricing/lock data is reconciled against Cotality's investor commitment record rather than generated fresh, with exceptions routed to a pricing analyst queue.</li>
-      </ol>
-
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">3. System Interaction Diagram (Textual)</h2>
-      <pre class="bg-slate-900 text-slate-100 text-xs rounded-md p-4 overflow-x-auto mb-4">Consumer Channel ─┐
-                   ├──▶ Lender Price (PPE) ──Feeds Product Eligibility──▶ Encompass (LOS)
-Correspondent ─────┘                                                        │
-                                                                             │ Lock Request
-                                                                             ▼
-                                                          Cotality (Pricing/Lock)
-                                                                             │
-                                                              Pushes Locked Rate
-                                                                             ▼
-                                                                  Encompass (LOS)
-                                                                             │
-                                                                             ▼
-                                                          Underwriting / Servicing Boarding</pre>
-
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">4. Cross-System Field Mapping</h2>
-      <p class="text-sm text-slate-700 mb-3">Canonical field mapping across the three SORs. Field IDs shown for Encompass reflect standard Encompass field ID convention.</p>
-      <div class="overflow-x-auto mb-6 border border-slate-200 rounded-md">
-        <table class="kb-table w-full text-xs text-left">
-          <thead class="bg-slate-100 text-slate-600 uppercase tracking-wide">
-            <tr>
-              <th class="px-3 py-2 border-b border-slate-200">Business Field</th>
-              <th class="px-3 py-2 border-b border-slate-200">Encompass Field ID</th>
-              <th class="px-3 py-2 border-b border-slate-200">Lender Price API Field</th>
-              <th class="px-3 py-2 border-b border-slate-200">Cotality Field</th>
-              <th class="px-3 py-2 border-b border-slate-200">Data Type</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Loan Amount</td><td class="px-3 py-2 font-mono">Field 1109</td><td class="px-3 py-2 font-mono">loanAmount</td><td class="px-3 py-2 font-mono">loan_amt</td><td class="px-3 py-2">Decimal(12,2)</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">FICO (Representative)</td><td class="px-3 py-2 font-mono">Field 1109 / CX.FICO.REP</td><td class="px-3 py-2 font-mono">creditScore</td><td class="px-3 py-2 font-mono">fico_repr</td><td class="px-3 py-2">Integer</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Debt-to-Income (DTI)</td><td class="px-3 py-2 font-mono">Field 353 (Back-End)</td><td class="px-3 py-2 font-mono">dtiRatio</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Decimal(5,2)</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Loan-to-Value (LTV)</td><td class="px-3 py-2 font-mono">Field 353</td><td class="px-3 py-2 font-mono">ltvRatio</td><td class="px-3 py-2 font-mono">ltv_pct</td><td class="px-3 py-2">Decimal(5,2)</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Note Rate</td><td class="px-3 py-2 font-mono">Field 3</td><td class="px-3 py-2 font-mono">noteRate</td><td class="px-3 py-2 font-mono">locked_rate</td><td class="px-3 py-2">Decimal(5,3)</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Pricing Tier / Investor</td><td class="px-3 py-2 font-mono">CX.INVESTOR.CODE</td><td class="px-3 py-2 font-mono">investorId</td><td class="px-3 py-2 font-mono">investor_commitment_id</td><td class="px-3 py-2">String(20)</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Lock Period (Days)</td><td class="px-3 py-2 font-mono">Field 3140</td><td class="px-3 py-2 font-mono">lockPeriodDays</td><td class="px-3 py-2 font-mono">lock_term_days</td><td class="px-3 py-2">Integer</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Lock Expiration Date</td><td class="px-3 py-2 font-mono">Field 3143</td><td class="px-3 py-2 font-mono">n/a</td><td class="px-3 py-2 font-mono">lock_exp_date</td><td class="px-3 py-2">Date (ISO-8601)</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Rebate / Points</td><td class="px-3 py-2 font-mono">Field 815</td><td class="px-3 py-2 font-mono">rebatePoints</td><td class="px-3 py-2 font-mono">rebate_pts</td><td class="px-3 py-2">Decimal(6,3)</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Occupancy Type</td><td class="px-3 py-2 font-mono">Field 1811</td><td class="px-3 py-2 font-mono">occupancyType</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Enum</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Property Type</td><td class="px-3 py-2 font-mono">Field 1041</td><td class="px-3 py-2 font-mono">propertyType</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Enum</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Loan Purpose</td><td class="px-3 py-2 font-mono">Field 19</td><td class="px-3 py-2 font-mono">loanPurpose</td><td class="px-3 py-2 font-mono">n/a (pass-through)</td><td class="px-3 py-2">Enum</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">AUS Recommendation</td><td class="px-3 py-2 font-mono">Field VASUMM.X29</td><td class="px-3 py-2 font-mono">n/a</td><td class="px-3 py-2 font-mono">n/a</td><td class="px-3 py-2">Enum (DU/LPA)</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">5. Integration Endpoints</h2>
-      <div class="overflow-x-auto mb-6 border border-slate-200 rounded-md">
-        <table class="kb-table w-full text-xs text-left">
-          <thead class="bg-slate-100 text-slate-600 uppercase tracking-wide">
-            <tr>
-              <th class="px-3 py-2 border-b border-slate-200">Integration</th>
-              <th class="px-3 py-2 border-b border-slate-200">Protocol</th>
-              <th class="px-3 py-2 border-b border-slate-200">Endpoint (Mock)</th>
-              <th class="px-3 py-2 border-b border-slate-200">Frequency</th>
-              <th class="px-3 py-2 border-b border-slate-200">Format</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100">
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">LP → Encompass Product Feed</td><td class="px-3 py-2">REST/HTTPS</td><td class="px-3 py-2 font-mono">/api/v2/pricing/eligibility</td><td class="px-3 py-2">Real-time (on request)</td><td class="px-3 py-2">JSON</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Encompass → Cotality Lock Request</td><td class="px-3 py-2">REST Webhook</td><td class="px-3 py-2 font-mono">/lockdesk/v1/lock-requests</td><td class="px-3 py-2">Real-time (event-driven)</td><td class="px-3 py-2">JSON</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Cotality → Encompass Lock Confirm</td><td class="px-3 py-2">SOAP/REST hybrid</td><td class="px-3 py-2 font-mono">/api/EllieMae/EDC/loans/{id}</td><td class="px-3 py-2">15-min poll + webhook</td><td class="px-3 py-2">XML/JSON</td></tr>
-            <tr class="hover:bg-slate-50"><td class="px-3 py-2 font-medium">Correspondent Loan Import</td><td class="px-3 py-2">SFTP + REST</td><td class="px-3 py-2 font-mono">/correspondent/v1/import</td><td class="px-3 py-2">Batch (hourly)</td><td class="px-3 py-2">MISMO 3.4 XML</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">6. Exception Handling</h2>
-      <p class="text-sm leading-relaxed text-slate-700">
-        Pricing mismatches between Lender Price's quoted rate and Cotality's confirmed lock (tolerance &gt; 0.125 bps) trigger a
-        <code class="bg-slate-100 px-1 rounded">PRICE_EXCEPTION</code> event routed to the Secondary Marketing exception queue. FICO or DTI
-        deltas discovered post-lock (re-verification) trigger a <code class="bg-slate-100 px-1 rounded">RELOCK_REQUIRED</code> workflow in
-        Encompass, invalidating the current Cotality investor commitment and re-initiating step 1.
-      </p>
-    </article>
-
-    <article id="doc-consumer" class="doc-section hidden bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">Consumer Lending Channel Guide</h1>
-      <div class="text-xs text-slate-500 mb-6">Last updated 2026-06-30 &middot; Version 2.1</div>
-      <p class="text-sm leading-relaxed text-slate-700 mb-4">
-        Consumer Lending covers retail branch and direct-to-consumer digital origination. Borrowers or loan officers initiate
-        applications through the Chase MyHome digital portal or branch-based Encompass workstations. All product eligibility and
-        pricing calls originate from the borrower-facing UI directly against Lender Price, with results streamed into Encompass
-        in real time.
-      </p>
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">Key Characteristics</h2>
-      <ul class="list-disc list-inside text-sm text-slate-700 space-y-1 mb-4">
-        <li>Loan officer assisted or self-service digital application intake (1003/URLA).</li>
-        <li>Real-time pricing refresh every time a material loan characteristic changes (loan amount, FICO tier, LTV band).</li>
-        <li>Lock requests initiated directly from the Encompass Pipeline UI, routed automatically to Cotality.</li>
-        <li>SLA: Pricing eligibility response &lt; 2s; lock confirmation &lt; 5 min during market hours.</li>
-      </ul>
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">Related Fields</h2>
-      <p class="text-sm text-slate-700">See <button class="text-blue-700 underline" onclick="showDoc('e2e')">E2E Loan Origination Data Flow</button> for the full field mapping table.</p>
-    </article>
-
-    <article id="doc-correspondent" class="doc-section hidden bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">Correspondent Lending Channel Guide</h1>
-      <div class="text-xs text-slate-500 mb-6">Last updated 2026-06-30 &middot; Version 2.0</div>
-      <p class="text-sm leading-relaxed text-slate-700 mb-4">
-        Correspondent Lending purchases closed, funded loans from approved correspondent sellers. Loans arrive as MISMO 3.4 XML
-        packages via SFTP and are ingested through the Correspondent Import Service into Encompass. Because the loan is already
-        priced and locked by the seller, Cotality performs a reconciliation pass against the seller's stated pricing rather than
-        generating an original quote.
-      </p>
-      <h2 class="text-lg font-semibold text-slate-900 mt-6 mb-2">Key Characteristics</h2>
-      <ul class="list-disc list-inside text-sm text-slate-700 space-y-1 mb-4">
-        <li>Batch ingestion cadence: hourly import windows, 06:00–20:00 ET.</li>
-        <li>Pricing reconciliation tolerance: 0.125 bps before manual exception review.</li>
-        <li>Lender Price used for post-purchase eligibility audit, not original quoting.</li>
-        <li>SLA: Import-to-board cycle time &lt; 4 business hours.</li>
-      </ul>
-    </article>
-
-    <article id="doc-encompass" class="doc-section hidden bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">System Profile: Encompass (Core LOS)</h1>
-      <div class="text-xs text-slate-500 mb-6">Last updated 2026-05-22 &middot; Version 4.0</div>
-      <table class="text-sm mb-4">
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Vendor</td><td>ICE Mortgage Technology</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Role</td><td>System of Record for the loan file, disclosures, conditions, and closing</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Integration Layer</td><td>Encompass Developer Connect (EDC) / Encompass Partner Connect (EPC)</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Auth</td><td>OAuth 2.0 Client Credentials</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Primary Consumers</td><td>Underwriting, Closing, Post-Closing, Servicing Boarding</td></tr>
-      </table>
-      <p class="text-sm text-slate-700">Encompass is the golden source for the borrower loan file (Field IDs 1–4999 standard, 5000+ custom CX fields). All downstream boarding to servicing systems reads from the final "Clear to Close" snapshot.</p>
-    </article>
-
-    <article id="doc-cotality" class="doc-section hidden bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">System Profile: Cotality (Pricing & Locking)</h1>
-      <div class="text-xs text-slate-500 mb-6">Last updated 2026-05-18 &middot; Version 1.6</div>
-      <table class="text-sm mb-4">
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Vendor</td><td>Cotality (formerly CoreLogic)</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Role</td><td>Secondary marketing pricing engine and rate-lock desk of record</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Integration Layer</td><td>Cotality Lock Desk API (REST) + legacy SOAP adapter</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Auth</td><td>Mutual TLS + API Key</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Primary Consumers</td><td>Secondary Marketing, Capital Markets, Encompass Lock Object</td></tr>
-      </table>
-      <p class="text-sm text-slate-700">Cotality owns the investor commitment ledger and is the authoritative source for locked rate, lock expiration, and pair-off/extension events.</p>
-    </article>
-
-    <article id="doc-lenderprice" class="doc-section hidden bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">System Profile: Lender Price (Product & Pricing Engine)</h1>
-      <div class="text-xs text-slate-500 mb-6">Last updated 2026-05-10 &middot; Version 2.3</div>
-      <table class="text-sm mb-4">
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Vendor</td><td>Lender Price</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Role</td><td>Product eligibility, initial pricing, and rate sheet management</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Integration Layer</td><td>Lender Price REST API v2</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Auth</td><td>OAuth 2.0 Bearer Token</td></tr>
-        <tr><td class="pr-4 py-1 font-medium text-slate-600">Primary Consumers</td><td>Digital Point-of-Sale, Encompass Pricing Object, Correspondent Audit</td></tr>
-      </table>
-      <p class="text-sm text-slate-700">Lender Price maintains the master investor overlay rules and rate sheets; every pricing scenario returns an eligible product set with associated note rate and rebate/point combinations.</p>
-    </article>
-
-    <article id="doc-governance" class="doc-section hidden bg-white border border-slate-200 rounded-lg p-8 shadow-sm">
-      <h1 class="text-2xl font-bold text-slate-900 mb-2">Data Stewardship & SLAs</h1>
-      <div class="text-xs text-slate-500 mb-6">Last updated 2026-04-02 &middot; Version 1.2</div>
-      <ul class="list-disc list-inside text-sm text-slate-700 space-y-1">
-        <li>Encompass: System of record for loan file &amp; disclosures — Owner: LOS Platform Engineering.</li>
-        <li>Cotality: System of record for locked rate &amp; investor commitment — Owner: Secondary Marketing Technology.</li>
-        <li>Lender Price: System of record for product eligibility &amp; rate sheets — Owner: Capital Markets Technology.</li>
-        <li>Field-level data quality exceptions escalate to the Enterprise Data Architecture team within 1 business day.</li>
-      </ul>
-    </article>
-
-    <div id="noResults" class="hidden bg-white border border-slate-200 rounded-lg p-8 shadow-sm text-center text-slate-500 text-sm">
-      No documents match your search.
-    </div>
-
   </main>
 </div>
 
 <script>
-  const docs = ['e2e','consumer','correspondent','encompass','cotality','lenderprice','governance'];
-  const linkMap = { e2e: 'e2e', consumer: 'consumer', correspondent: 'correspondent', encompass: 'encompass', cotality: 'cotality', lenderprice: 'lenderprice', governance: 'governance' };
+  const docMeta = {
+    'e2e': { category: 'architecture', status: 'Published', owner: 'Enterprise Data Architecture', version: '3.2', updated: '2026-07-14', classification: 'Internal' },
+    'consumer': { category: 'channels', status: 'Published', owner: 'Consumer Direct Lending', version: '2.1', updated: '2026-06-30', classification: 'Internal' },
+    'correspondent': { category: 'channels', status: 'Published', owner: 'Correspondent Lending Ops', version: '2.0', updated: '2026-06-30', classification: 'Internal' },
+    'encompass': { category: 'systems', status: 'Published', owner: 'LOS Platform Engineering', version: '4.0', updated: '2026-05-22', classification: 'Internal' },
+    'cotality': { category: 'systems', status: 'Published', owner: 'Secondary Marketing Technology', version: '1.6', updated: '2026-05-18', classification: 'Confidential' },
+    'lenderprice': { category: 'systems', status: 'Published', owner: 'Capital Markets Technology', version: '2.3', updated: '2026-05-10', classification: 'Internal' },
+    'api-reference': { category: 'reference', status: 'Published', owner: 'Enterprise Data Architecture', version: '1.4', updated: '2026-07-20', classification: 'Confidential' },
+    'changelog': { category: 'reference', status: 'Published', owner: 'Enterprise Data Architecture', version: '—', updated: '2026-07-25', classification: 'Internal' },
+    'runbook': { category: 'ops', status: 'Under Review', owner: 'Secondary Marketing Technology', version: '0.9', updated: '2026-07-10', classification: 'Restricted' },
+    'governance': { category: 'ops', status: 'Published', owner: 'Enterprise Data Architecture', version: '1.2', updated: '2026-04-02', classification: 'Internal' }
+  };
+  const categoryLabels = { channels: 'Business Channels', systems: 'Systems of Record', architecture: 'Architecture', reference: 'Reference', ops: 'Operations & Governance' };
+  const docIds = Object.keys(docMeta);
 
-  function showDoc(id) {
-    docs.forEach(d => {
-      const el = document.getElementById('doc-' + d);
-      if (el) el.classList.add('hidden');
-    });
-    document.getElementById('noResults').classList.add('hidden');
-    const target = document.getElementById('doc-' + id);
-    if (target) target.classList.remove('hidden');
+  let currentDoc = null;
+  let role = localStorage.getItem('kb_role') || 'architect';
+  let favorites = JSON.parse(localStorage.getItem('kb_favorites') || '[]');
+  let recents = JSON.parse(localStorage.getItem('kb_recent') || '[]');
+  const collapsedCats = JSON.parse(localStorage.getItem('kb_collapsed') || '[]');
 
-    document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
-    document.querySelectorAll('[data-doc="' + id + '"]').forEach(l => l.classList.add('active'));
+  function titleOf(id) { return document.getElementById('doc-' + id).getAttribute('data-title'); }
+
+  // ---------- Doc switching ----------
+  function showDoc(id, skipHistory) {
+    if (!docMeta[id]) return;
+    docIds.forEach(d => document.getElementById('doc-' + d).classList.add('hidden'));
+    document.getElementById('doc-' + id).classList.remove('hidden');
+    currentDoc = id;
+
+    if (!skipHistory) history.replaceState(null, '', '?doc=' + id);
+
+    recents = recents.filter(r => r !== id);
+    recents.unshift(id);
+    recents = recents.slice(0, 5);
+    localStorage.setItem('kb_recent', JSON.stringify(recents));
+
+    renderSidebar();
+    renderBreadcrumb();
+    renderMetaBar();
+    renderFeedback();
+    renderComments();
+    renderTOC();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  document.querySelectorAll('.sidebar-link').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      showDoc(link.getAttribute('data-doc'));
+  // ---------- Sidebar ----------
+  function docLinkHtml(id, compact) {
+    const m = docMeta[id];
+    const starred = favorites.includes(id);
+    const statusColor = m.status === 'Published' ? 'bg-emerald-50 text-emerald-700' : m.status === 'Under Review' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600';
+    return `<a href="#" data-doc="${id}" class="sidebar-link relative flex items-center gap-2 pl-4 pr-2 py-2 rounded-md text-sm text-slate-700 hover:bg-slate-100 ${currentDoc === id ? 'active' : ''}">
+        <span class="active-bar absolute left-0 top-1 bottom-1 w-[3px] rounded bg-blue-600 opacity-0"></span>
+        <span class="flex-1 truncate">${titleOf(id)}</span>
+        ${compact ? '' : `<span class="text-[9px] px-1.5 py-0.5 rounded ${statusColor} whitespace-nowrap">${m.status}</span>`}
+        <button class="star-btn text-amber-500 text-xs ${starred ? 'starred' : ''}" data-star="${id}" title="Toggle favorite">&#9733;</button>
+      </a>`;
+  }
+
+  function renderSidebar() {
+    document.querySelectorAll('.cat-items').forEach(el => {
+      const ids = el.getAttribute('data-ids').split(',');
+      el.innerHTML = ids.map(id => docLinkHtml(id, false)).join('');
+    });
+
+    const favSection = document.getElementById('favoritesSection');
+    const favList = document.getElementById('favoritesList');
+    if (favorites.length) {
+      favSection.classList.remove('hidden');
+      favList.innerHTML = favorites.map(id => docLinkHtml(id, true)).join('');
+    } else favSection.classList.add('hidden');
+
+    const recentSection = document.getElementById('recentSection');
+    const recentList = document.getElementById('recentList');
+    const recentOthers = recents.filter(r => r !== currentDoc);
+    if (recentOthers.length) {
+      recentSection.classList.remove('hidden');
+      recentList.innerHTML = recentOthers.slice(0, 4).map(id => docLinkHtml(id, true)).join('');
+    } else recentSection.classList.add('hidden');
+
+    document.querySelectorAll('[data-doc]').forEach(link => {
+      link.addEventListener('click', (e) => { e.preventDefault(); showDoc(link.getAttribute('data-doc')); });
+    });
+    document.querySelectorAll('[data-star]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const id = btn.getAttribute('data-star');
+        favorites = favorites.includes(id) ? favorites.filter(f => f !== id) : [...favorites, id];
+        localStorage.setItem('kb_favorites', JSON.stringify(favorites));
+        renderSidebar();
+      });
+    });
+
+    document.querySelectorAll('.cat-group').forEach(g => {
+      g.classList.toggle('collapsed', collapsedCats.includes(g.getAttribute('data-cat')));
+    });
+  }
+
+  document.querySelectorAll('.cat-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const group = btn.closest('.cat-group');
+      const cat = group.getAttribute('data-cat');
+      group.classList.toggle('collapsed');
+      const idx = collapsedCats.indexOf(cat);
+      if (group.classList.contains('collapsed')) { if (idx === -1) collapsedCats.push(cat); }
+      else if (idx !== -1) collapsedCats.splice(idx, 1);
+      localStorage.setItem('kb_collapsed', JSON.stringify(collapsedCats));
     });
   });
+
+  // ---------- Breadcrumb ----------
+  function renderBreadcrumb() {
+    const m = docMeta[currentDoc];
+    document.getElementById('breadcrumb').innerHTML = `
+      <button class="hover:text-blue-700" onclick="showDoc('e2e')">Home Lending</button>
+      <span>/</span>
+      <span>${categoryLabels[m.category]}</span>
+      <span>/</span>
+      <span class="text-slate-700 font-medium">${titleOf(currentDoc)}</span>
+    `;
+  }
+
+  // ---------- Meta bar (owner/version/status/classification/toolbar) ----------
+  function readingTime(id) {
+    const words = document.getElementById('doc-' + id).textContent.trim().split(/\s+/).length;
+    return Math.max(1, Math.round(words / 200));
+  }
+
+  function renderMetaBar() {
+    const container = document.querySelector(`[data-meta-for="${currentDoc}"]`);
+    if (!container) return;
+    const m = docMeta[currentDoc];
+    const statusColor = m.status === 'Published' ? 'bg-emerald-50 text-emerald-700' : m.status === 'Under Review' ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-600';
+    const classColor = m.classification === 'Restricted' ? 'bg-red-50 text-red-700' : m.classification === 'Confidential' ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-600';
+    const starred = favorites.includes(currentDoc);
+    const canPublish = role === 'architect' && m.status === 'Under Review';
+
+    container.innerHTML = `
+      <div class="flex flex-wrap items-center gap-2 text-[11px] mb-2 mt-1">
+        <span class="px-2 py-1 rounded font-medium ${statusColor}">${m.status}</span>
+        <span class="px-2 py-1 rounded font-medium ${classColor}">${m.classification}</span>
+        <span class="text-slate-500">Owner: <strong class="text-slate-700">${m.owner}</strong></span>
+        <span class="text-slate-500">&middot; Updated ${m.updated}</span>
+        <span class="text-slate-500">&middot; ${readingTime(currentDoc)} min read</span>
+        <span class="relative">
+          <button id="versionBtn" class="text-slate-500 underline decoration-dotted">v${m.version} &middot; History</button>
+          <div id="versionDropdown" class="hidden absolute z-20 top-6 left-0 w-64 bg-white border border-slate-200 rounded-md shadow-lg p-3 text-xs">
+            <div class="font-semibold mb-2 text-slate-700">Version History</div>
+            <div class="mb-1"><strong>v${m.version}</strong> &middot; ${m.updated} — Current published version</div>
+            <div class="mb-1 text-slate-500"><strong>Previous</strong> &middot; editorial revision</div>
+            <div class="text-slate-500"><strong>v1.0</strong> &middot; initial publish</div>
+          </div>
+        </span>
+      </div>
+      <div class="flex items-center gap-2 mb-5">
+        <button id="printBtn" class="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-100">&#128438; Print</button>
+        <button id="copyLinkBtn" class="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-100">&#128279; Copy Link</button>
+        <button id="starToolbarBtn" class="text-xs border border-slate-300 rounded px-2 py-1 hover:bg-slate-100 ${starred ? 'text-amber-500' : ''}">&#9733; ${starred ? 'Starred' : 'Star'}</button>
+        ${canPublish ? `<button id="publishBtn" class="text-xs bg-blue-700 text-white rounded px-2 py-1 hover:bg-blue-800">Approve &amp; Publish</button>` : ''}
+        ${m.classification === 'Restricted' ? `<span class="text-[11px] text-red-600 ml-auto">&#9888; Restricted — Secondary Marketing Technology stewardship</span>` : ''}
+      </div>
+    `;
+
+    document.getElementById('versionBtn').addEventListener('click', () => document.getElementById('versionDropdown').classList.toggle('hidden'));
+    document.getElementById('printBtn').addEventListener('click', () => window.print());
+    document.getElementById('copyLinkBtn').addEventListener('click', (e) => {
+      const url = location.origin + location.pathname + '?doc=' + currentDoc;
+      if (navigator.clipboard) navigator.clipboard.writeText(url);
+      const btn = e.target; const original = btn.textContent;
+      btn.textContent = 'Copied!'; setTimeout(() => btn.textContent = original, 1400);
+    });
+    document.getElementById('starToolbarBtn').addEventListener('click', () => {
+      favorites = favorites.includes(currentDoc) ? favorites.filter(f => f !== currentDoc) : [...favorites, currentDoc];
+      localStorage.setItem('kb_favorites', JSON.stringify(favorites));
+      renderSidebar(); renderMetaBar();
+    });
+    const publishBtn = document.getElementById('publishBtn');
+    if (publishBtn) publishBtn.addEventListener('click', () => {
+      docMeta[currentDoc].status = 'Published';
+      renderSidebar(); renderMetaBar();
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    const dd = document.getElementById('versionDropdown');
+    if (dd && !dd.classList.contains('hidden') && !dd.contains(e.target) && e.target.id !== 'versionBtn') dd.classList.add('hidden');
+  });
+
+  // ---------- Feedback widget ----------
+  function renderFeedback() {
+    document.querySelectorAll('.feedback-widget').forEach(el => {
+      const id = el.getAttribute('data-feedback');
+      el.innerHTML = `
+        <div class="border-t border-slate-200 pt-4">
+          <div class="text-sm font-medium text-slate-700 mb-2">Was this article helpful?</div>
+          <div class="flex gap-2" id="fb-buttons-${id}">
+            <button class="fb-yes text-xs border border-slate-300 rounded px-3 py-1.5 hover:bg-slate-100">&#128077; Yes</button>
+            <button class="fb-no text-xs border border-slate-300 rounded px-3 py-1.5 hover:bg-slate-100">&#128078; No</button>
+          </div>
+        </div>
+      `;
+      el.querySelectorAll('.fb-yes, .fb-no').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.getElementById(`fb-buttons-${id}`).innerHTML = '<span class="text-xs text-emerald-600">Thanks for your feedback — it helps the Enterprise Data Architecture team prioritize updates.</span>';
+        });
+      });
+    });
+  }
+
+  // ---------- Comments ----------
+  const mockComments = {
+    default: [
+      { author: 'S. Patel', role: 'LOS Platform Engineering', text: 'Can we confirm the EDC webhook retry policy is documented somewhere too?', time: '3 days ago' },
+      { author: 'M. Chen', role: 'Consumer Direct Lending', text: 'Updated for the July SLA changes — looks accurate on our end.', time: '1 day ago' }
+    ]
+  };
+  function renderComments() {
+    document.querySelectorAll('.comments-section').forEach(el => {
+      const id = el.getAttribute('data-comments');
+      const list = mockComments[id] || mockComments.default;
+      const readOnly = role === 'viewer';
+      el.innerHTML = `
+        <div class="border-t border-slate-200 pt-4">
+          <div class="text-sm font-medium text-slate-700 mb-3">Comments (${list.length})</div>
+          <div class="space-y-3 mb-4">
+            ${list.map(c => `
+              <div class="flex gap-2">
+                <div class="w-7 h-7 rounded-full bg-slate-700 text-white flex items-center justify-center text-[10px] font-semibold shrink-0">${c.author.split(' ').map(p=>p[0]).join('')}</div>
+                <div class="text-xs">
+                  <div><strong class="text-slate-700">${c.author}</strong> <span class="text-slate-400">&middot; ${c.role} &middot; ${c.time}</span></div>
+                  <div class="text-slate-600 mt-0.5">${c.text}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+          ${readOnly
+            ? `<div class="text-xs text-slate-500 bg-slate-100 rounded-md px-3 py-2">You have read-only access. Switch to Business Analyst or Enterprise Architect to comment.</div>`
+            : `<div class="flex gap-2">
+                <input type="text" placeholder="Add a comment..." class="flex-1 text-xs border border-slate-300 rounded-md px-3 py-2" id="commentInput-${id}">
+                <button class="text-xs bg-blue-700 text-white rounded-md px-3 py-2 hover:bg-blue-800" id="commentBtn-${id}">Post</button>
+              </div>`
+          }
+        </div>
+      `;
+      const btn = document.getElementById(`commentBtn-${id}`);
+      if (btn) btn.addEventListener('click', () => {
+        const input = document.getElementById(`commentInput-${id}`);
+        if (!input.value.trim()) return;
+        (mockComments[id] || (mockComments[id] = [...mockComments.default])).push({ author: 'You', role: role === 'architect' ? 'Enterprise Architect' : 'Business Analyst', text: input.value.trim(), time: 'just now' });
+        renderComments();
+      });
+    });
+  }
+
+  // ---------- TOC ----------
+  function renderTOC() {
+    const article = document.getElementById('doc-' + currentDoc);
+    const headings = article.querySelectorAll('h2[id]');
+    const tocList = document.getElementById('tocList');
+    if (!headings.length) { tocList.innerHTML = '<div class="text-slate-400">No sections</div>'; return; }
+    tocList.innerHTML = Array.from(headings).map(h =>
+      `<a href="#${h.id}" class="toc-link block border-l-2 border-slate-200 pl-2 py-0.5 text-slate-500 hover:text-blue-700">${h.textContent}</a>`
+    ).join('');
+    tocList.querySelectorAll('.toc-link').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.getElementById(link.getAttribute('href').slice(1)).scrollIntoView({ behavior: 'smooth', block: 'start' });
+        tocList.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
+        link.classList.add('active');
+      });
+    });
+  }
+
+  // ---------- Role (RBAC) ----------
+  const roleSelect = document.getElementById('roleSelect');
+  roleSelect.value = role;
+  function applyRole() {
+    localStorage.setItem('kb_role', role);
+    document.querySelectorAll('#rbacTable tr[data-role-row]').forEach(row => {
+      row.classList.toggle('bg-blue-50', row.getAttribute('data-role-row') === role);
+    });
+    renderMetaBar();
+    renderComments();
+  }
+  roleSelect.addEventListener('change', () => { role = roleSelect.value; applyRole(); });
+
+  // ---------- Theme ----------
+  function initTheme() {
+    if (localStorage.getItem('kb_theme') === 'dark') document.documentElement.classList.add('dark');
+  }
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    document.documentElement.classList.toggle('dark');
+    localStorage.setItem('kb_theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+  });
+
+  // ---------- Search index + typeahead ----------
+  let searchIndex = [];
+  function buildSearchIndex() {
+    searchIndex = docIds.map(id => ({ id, title: titleOf(id), text: document.getElementById('doc-' + id).textContent.replace(/\s+/g, ' ').trim() }));
+  }
+  function snippetFor(text, q) {
+    const idx = text.toLowerCase().indexOf(q.toLowerCase());
+    if (idx === -1) return text.slice(0, 90) + '...';
+    const start = Math.max(0, idx - 40);
+    const raw = text.slice(start, idx + q.length + 50);
+    const re = new RegExp('(' + q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'ig');
+    return (start > 0 ? '...' : '') + raw.replace(re, '<mark class="hl">$1</mark>') + '...';
+  }
 
   const searchInput = document.getElementById('searchInput');
-  const searchStatus = document.getElementById('searchStatus');
-  const noResults = document.getElementById('noResults');
-
-  searchInput.addEventListener('input', (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    if (!q) {
-      searchStatus.classList.add('hidden');
-      noResults.classList.add('hidden');
-      showDoc('e2e');
-      return;
-    }
-    let matchCount = 0;
-    docs.forEach(d => {
-      const el = document.getElementById('doc-' + d);
-      const text = el.innerText.toLowerCase();
-      const matches = text.includes(q);
-      el.classList.toggle('hidden', !matches);
-      if (matches) matchCount++;
+  const searchResults = document.getElementById('searchResults');
+  searchInput.addEventListener('input', () => {
+    const q = searchInput.value.trim();
+    if (!q) { searchResults.classList.add('hidden'); return; }
+    const matches = searchIndex.filter(d => d.title.toLowerCase().includes(q.toLowerCase()) || d.text.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+    searchResults.innerHTML = matches.length
+      ? matches.map(d => `
+          <button data-doc-result="${d.id}" class="block w-full text-left px-4 py-2.5 text-xs hover:bg-slate-50 border-b border-slate-100 last:border-b-0">
+            <div class="font-semibold text-slate-800 mb-0.5">${d.title} <span class="text-[10px] font-normal px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 ml-1">${categoryLabels[docMeta[d.id].category]}</span></div>
+            <div class="text-slate-500">${snippetFor(d.text, q)}</div>
+          </button>
+        `).join('')
+      : `<div class="px-4 py-3 text-xs text-slate-400">No documents match "${q}"</div>`;
+    searchResults.classList.remove('hidden');
+    searchResults.querySelectorAll('[data-doc-result]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        showDoc(btn.getAttribute('data-doc-result'));
+        searchInput.value = ''; searchResults.classList.add('hidden');
+      });
     });
-    noResults.classList.toggle('hidden', matchCount > 0);
-    searchStatus.classList.remove('hidden');
-    searchStatus.textContent = matchCount + ' document(s) match "' + e.target.value.trim() + '"';
+  });
+  document.addEventListener('click', (e) => {
+    if (!searchResults.contains(e.target) && e.target !== searchInput) searchResults.classList.add('hidden');
+  });
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); searchInput.focus(); }
+    if (e.key === 'Escape') { searchResults.classList.add('hidden'); searchInput.blur(); }
   });
 
-  showDoc('e2e');
+  // ---------- Code tabs (API reference) ----------
+  document.querySelectorAll('.code-tabs').forEach(group => {
+    group.querySelectorAll('.code-tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.querySelectorAll('.code-tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        group.querySelectorAll('.code-panel').forEach(p => p.classList.add('hidden'));
+        document.getElementById(btn.getAttribute('data-target')).classList.remove('hidden');
+      });
+    });
+  });
+
+  // ---------- Init ----------
+  initTheme();
+  buildSearchIndex();
+  const initialDoc = new URLSearchParams(location.search).get('doc');
+  applyRole();
+  showDoc(docMeta[initialDoc] ? initialDoc : 'e2e', true);
 </script>
 
 </body>
