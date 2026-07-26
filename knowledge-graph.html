@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chase Home Lending Knowledge Graph Visualizer</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    background: #0f172a; color: #e2e8f0; height: 100vh; overflow: hidden;
+  }
+  header {
+    height: 64px; display: flex; align-items: center; padding: 0 20px; gap: 12px;
+    background: #111827; border-bottom: 1px solid #1f2937;
+  }
+  header .logo { width: 36px; height: 36px; border-radius: 8px; background: #2563eb; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+  header .title { font-size: 14px; font-weight: 700; color: #f8fafc; }
+  header .subtitle { font-size: 11px; color: #94a3b8; }
+  header .legend { margin-left: auto; display: flex; gap: 16px; font-size: 11px; color: #cbd5e1; flex-wrap: wrap; }
+  header .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  header .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+  .layout { display: flex; height: calc(100vh - 64px); }
+  .graph-pane { flex: 1; position: relative; background:
+      radial-gradient(circle at 20% 20%, #1e293b 0%, #0f172a 60%);
+  }
+  svg { width: 100%; height: 100%; cursor: grab; }
+  svg:active { cursor: grabbing; }
+
+  .node-circle { stroke-width: 2; transition: filter .15s ease, stroke-width .15s ease; cursor: pointer; }
+  .node-circle:hover { filter: brightness(1.25); }
+  .node-circle.selected { stroke: #facc15; stroke-width: 4; }
+  .node-label { font-size: 11px; fill: #f1f5f9; pointer-events: none; text-anchor: middle; font-weight: 600; }
+  .edge-line { stroke: #475569; stroke-width: 1.6; marker-end: url(#arrowhead); fill: none; }
+  .edge-label { font-size: 9.5px; fill: #94a3b8; text-anchor: middle; }
+  .edge-label-bg { fill: #0f172a; opacity: 0.85; }
+
+  .side-panel {
+    width: 340px; background: #111827; border-left: 1px solid #1f2937; padding: 20px;
+    overflow-y: auto; flex-shrink: 0;
+  }
+  .side-panel h2 { font-size: 15px; margin: 0 0 4px; color: #f8fafc; }
+  .side-panel .type-badge {
+    display: inline-block; font-size: 10px; padding: 3px 8px; border-radius: 4px; margin-bottom: 16px;
+    background: #1e293b; color: #93c5fd; font-weight: 600; letter-spacing: 0.03em;
+  }
+  .meta-row { margin-bottom: 14px; }
+  .meta-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 3px; }
+  .meta-value { font-size: 13px; color: #e2e8f0; line-height: 1.5; word-break: break-word; }
+  .meta-value code { background: #1e293b; padding: 2px 5px; border-radius: 3px; font-size: 12px; color: #7dd3fc; }
+  .conn-list { list-style: none; margin: 0; padding: 0; }
+  .conn-list li {
+    font-size: 12px; padding: 8px 10px; background: #1e293b; border-radius: 6px; margin-bottom: 6px;
+    cursor: pointer; border: 1px solid transparent; transition: border-color .15s ease;
+  }
+  .conn-list li:hover { border-color: #3b82f6; }
+  .conn-list li .dir { color: #64748b; margin-right: 4px; }
+  .empty-state { color: #64748b; font-size: 13px; line-height: 1.6; margin-top: 40px; text-align: center; }
+  .empty-state svg { display: block; margin: 0 auto 12px; opacity: 0.4; }
+  .controls { position: absolute; bottom: 16px; left: 16px; display: flex; gap: 8px; }
+  .controls button {
+    background: #1e293b; border: 1px solid #334155; color: #e2e8f0; width: 32px; height: 32px; border-radius: 6px;
+    font-size: 16px; cursor: pointer;
+  }
+  .controls button:hover { background: #334155; }
+  .hint { position: absolute; top: 16px; left: 16px; font-size: 11px; color: #64748b; background: #111827aa; padding: 6px 10px; border-radius: 6px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">C</div>
+  <div>
+    <div class="title">Home Lending Knowledge Graph</div>
+    <div class="subtitle">Encompass &middot; Cotality &middot; Lender Price &middot; Channel Topology</div>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#10b981"></span> System</span>
+    <span><span class="dot" style="background:#8b5cf6"></span> Channel</span>
+    <span><span class="dot" style="background:#f59e0b"></span> Data Entity</span>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="graph-pane" id="graphPane">
+    <div class="hint">Click a node to inspect &middot; Drag background to pan</div>
+    <svg id="graphSvg" viewBox="0 0 900 700">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L0,6 L9,3 z" fill="#64748b"></path>
+        </marker>
+      </defs>
+      <g id="edgesGroup"></g>
+      <g id="nodesGroup"></g>
+    </svg>
+    <div class="controls">
+      <button id="zoomIn" title="Zoom in">+</button>
+      <button id="zoomOut" title="Zoom out">−</button>
+      <button id="zoomReset" title="Reset view">⟲</button>
+    </div>
+  </div>
+
+  <div class="side-panel" id="sidePanel">
+    <div class="empty-state" id="emptyState">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+      Select a node in the graph to view its technical metadata, ownership, and connected relationships.
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const nodes = [
+    { id: 'encompass', label: 'Encompass', type: 'System', x: 480, y: 300, r: 44, color: '#10b981',
+      meta: {
+        'Node Type': 'System of Record (Core LOS)',
+        'System Owner': 'LOS Platform Engineering',
+        'Vendor': 'ICE Mortgage Technology',
+        'Primary API': '/api/EllieMae/EDC/loans/{id}',
+        'Auth Model': 'OAuth 2.0 Client Credentials',
+        'Data Format': 'JSON / MISMO 3.4 XML',
+        'Uptime SLA': '99.9%'
+      } },
+    { id: 'cotality', label: 'Cotality', type: 'System', x: 720, y: 150, r: 40, color: '#10b981',
+      meta: {
+        'Node Type': 'System of Record (Pricing / Lock Desk)',
+        'System Owner': 'Secondary Marketing Technology',
+        'Vendor': 'Cotality (formerly CoreLogic)',
+        'Primary API': '/lockdesk/v1/lock-requests',
+        'Auth Model': 'Mutual TLS + API Key',
+        'Data Format': 'JSON / SOAP-XML',
+        'Poll Interval': '15 min + real-time webhook'
+      } },
+    { id: 'lenderprice', label: 'Lender Price', type: 'System', x: 240, y: 150, r: 40, color: '#10b981',
+      meta: {
+        'Node Type': 'System of Record (Product & Pricing Engine)',
+        'System Owner': 'Capital Markets Technology',
+        'Vendor': 'Lender Price',
+        'Primary API': '/api/v2/pricing/eligibility',
+        'Auth Model': 'OAuth 2.0 Bearer Token',
+        'Data Format': 'JSON',
+        'Response SLA': '< 2 seconds'
+      } },
+    { id: 'consumer', label: 'Consumer Lending', type: 'Channel', x: 140, y: 420, r: 38, color: '#8b5cf6',
+      meta: {
+        'Node Type': 'Business Channel',
+        'System Owner': 'Consumer Direct Lending',
+        'Origination Path': 'Retail Branch + Digital POS',
+        'Primary API': 'n/a (channel construct)',
+        'Data Format': 'n/a',
+        'Volume Profile': 'High volume, real-time pricing refresh'
+      } },
+    { id: 'correspondent', label: 'Correspondent Lending', type: 'Channel', x: 140, y: 580, r: 38, color: '#8b5cf6',
+      meta: {
+        'Node Type': 'Business Channel',
+        'System Owner': 'Correspondent Lending Ops',
+        'Origination Path': 'Seller SFTP Import + Batch Reconciliation',
+        'Primary API': '/correspondent/v1/import',
+        'Data Format': 'MISMO 3.4 XML (batch)',
+        'Volume Profile': 'Batch, hourly import windows'
+      } },
+    { id: 'borrower', label: 'Borrower\nProfile', type: 'Entity', x: 480, y: 480, r: 34, color: '#f59e0b',
+      meta: {
+        'Node Type': 'Data Entity',
+        'System Owner': 'Enterprise Data Architecture',
+        'Resides In': 'Encompass (Field 1109 series)',
+        'Key Attributes': 'FICO, DTI, LTV, Income, Assets',
+        'Data Format': 'JSON (internal) / MISMO 3.4 XML (exchange)',
+        'Classification': 'PII — Restricted'
+      } },
+    { id: 'loanfile', label: 'Loan File', type: 'Entity', x: 480, y: 620, r: 34, color: '#f59e0b',
+      meta: {
+        'Node Type': 'Data Entity',
+        'System Owner': 'LOS Platform Engineering',
+        'Resides In': 'Encompass (golden record)',
+        'Key Attributes': 'Loan Amount, Purpose, Property Type, Conditions',
+        'Data Format': 'MISMO 3.4 XML',
+        'Classification': 'Confidential'
+      } },
+    { id: 'ratelock', label: 'Rate Lock', type: 'Entity', x: 720, y: 380, r: 34, color: '#f59e0b',
+      meta: {
+        'Node Type': 'Data Entity',
+        'System Owner': 'Secondary Marketing Technology',
+        'Resides In': 'Cotality (investor commitment ledger)',
+        'Key Attributes': 'Locked Rate, Lock Period, Expiration Date, Investor ID',
+        'Data Format': 'JSON',
+        'Classification': 'Confidential'
+      } },
+    { id: 'pricingsheet', label: 'Pricing Sheet', type: 'Entity', x: 240, y: 380, r: 34, color: '#f59e0b',
+      meta: {
+        'Node Type': 'Data Entity',
+        'System Owner': 'Capital Markets Technology',
+        'Resides In': 'Lender Price (rate sheet repository)',
+        'Key Attributes': 'Note Rate, Rebate/Points, Investor Overlays',
+        'Data Format': 'JSON',
+        'Classification': 'Internal'
+      } }
+  ];
+
+  const edges = [
+    { from: 'lenderprice', to: 'encompass', label: 'Feeds Product Eligibility' },
+    { from: 'cotality', to: 'encompass', label: 'Pushes Locked Rate' },
+    { from: 'encompass', to: 'cotality', label: 'Sends Lock Request' },
+    { from: 'consumer', to: 'encompass', label: 'Originates In' },
+    { from: 'consumer', to: 'lenderprice', label: 'Requests Pricing' },
+    { from: 'correspondent', to: 'encompass', label: 'Boards Closed Loan' },
+    { from: 'correspondent', to: 'cotality', label: 'Reconciles Lock' },
+    { from: 'lenderprice', to: 'pricingsheet', label: 'Publishes' },
+    { from: 'cotality', to: 'ratelock', label: 'Owns' },
+    { from: 'encompass', to: 'borrower', label: 'Stores' },
+    { from: 'encompass', to: 'loanfile', label: 'Stores' },
+    { from: 'borrower', to: 'loanfile', label: 'Attached To' }
+  ];
+
+  const nodesGroup = document.getElementById('nodesGroup');
+  const edgesGroup = document.getElementById('edgesGroup');
+  const svg = document.getElementById('graphSvg');
+  const nodeById = Object.fromEntries(nodes.map(n => [n.id, n]));
+
+  function edgePoint(from, to) {
+    const dx = to.x - from.x, dy = to.y - from.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+    const ux = dx / dist, uy = dy / dist;
+    return {
+      x1: from.x + ux * from.r, y1: from.y + uy * from.r,
+      x2: to.x - ux * to.r, y2: to.y - uy * to.r,
+      mx: (from.x + to.x) / 2, my: (from.y + to.y) / 2
+    };
+  }
+
+  function render() {
+    edgesGroup.innerHTML = '';
+    edges.forEach(e => {
+      const from = nodeById[e.from], to = nodeById[e.to];
+      const p = edgePoint(from, to);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      line.setAttribute('d', `M ${p.x1} ${p.y1} L ${p.x2} ${p.y2}`);
+      line.setAttribute('class', 'edge-line');
+      edgesGroup.appendChild(line);
+
+      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const labelWidth = e.label.length * 5.2 + 8;
+      bg.setAttribute('x', p.mx - labelWidth / 2);
+      bg.setAttribute('y', p.my - 9);
+      bg.setAttribute('width', labelWidth);
+      bg.setAttribute('height', 13);
+      bg.setAttribute('class', 'edge-label-bg');
+      edgesGroup.appendChild(bg);
+
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', p.mx);
+      label.setAttribute('y', p.my + 1);
+      label.setAttribute('class', 'edge-label');
+      label.textContent = e.label;
+      edgesGroup.appendChild(label);
+    });
+
+    nodesGroup.innerHTML = '';
+    nodes.forEach(n => {
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      g.setAttribute('data-id', n.id);
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', n.x);
+      circle.setAttribute('cy', n.y);
+      circle.setAttribute('r', n.r);
+      circle.setAttribute('fill', n.color);
+      circle.setAttribute('stroke', '#0f172a');
+      circle.setAttribute('class', 'node-circle');
+      circle.setAttribute('id', 'circle-' + n.id);
+      g.appendChild(circle);
+
+      const lines = n.label.split('\n');
+      lines.forEach((lineText, i) => {
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', n.x);
+        text.setAttribute('y', n.y + (i - (lines.length - 1) / 2) * 12 + 4);
+        text.setAttribute('class', 'node-label');
+        text.textContent = lineText;
+        g.appendChild(text);
+      });
+
+      g.addEventListener('click', () => selectNode(n.id));
+      nodesGroup.appendChild(g);
+    });
+  }
+
+  function selectNode(id) {
+    document.querySelectorAll('.node-circle').forEach(c => c.classList.remove('selected'));
+    const circle = document.getElementById('circle-' + id);
+    if (circle) circle.classList.add('selected');
+
+    const n = nodeById[id];
+    const emptyState = document.getElementById('emptyState');
+    if (emptyState) emptyState.remove();
+
+    const connections = edges.filter(e => e.from === id || e.to === id).map(e => {
+      const outgoing = e.from === id;
+      const otherId = outgoing ? e.to : e.from;
+      return { otherId, label: e.label, outgoing };
+    });
+
+    const metaRows = Object.entries(n.meta).map(([k, v]) =>
+      `<div class="meta-row"><div class="meta-label">${k}</div><div class="meta-value"><code>${v}</code></div></div>`
+    ).join('');
+
+    const connItems = connections.map(c => {
+      const other = nodeById[c.otherId];
+      const arrow = c.outgoing ? '→' : '←';
+      const dirText = c.outgoing ? 'to' : 'from';
+      return `<li data-target="${c.otherId}"><span class="dir">${arrow}</span>${c.label} <strong>${dirText} ${other.label.replace('\n',' ')}</strong></li>`;
+    }).join('');
+
+    document.getElementById('sidePanel').innerHTML = `
+      <h2>${n.label.replace('\n', ' ')}</h2>
+      <span class="type-badge">${n.type.toUpperCase()}</span>
+      ${metaRows}
+      <div class="meta-row">
+        <div class="meta-label">Connected Relationships (${connections.length})</div>
+        <ul class="conn-list">${connItems}</ul>
+      </div>
+    `;
+
+    document.querySelectorAll('.conn-list li').forEach(li => {
+      li.addEventListener('click', () => selectNode(li.getAttribute('data-target')));
+    });
+  }
+
+  render();
+
+  // Pan & zoom
+  let viewBox = { x: 0, y: 0, w: 900, h: 700 };
+  let isPanning = false, panStart = { x: 0, y: 0 };
+
+  function applyViewBox() {
+    svg.setAttribute('viewBox', `${viewBox.x} ${viewBox.y} ${viewBox.w} ${viewBox.h}`);
+  }
+
+  svg.addEventListener('mousedown', (e) => {
+    if (e.target === svg) {
+      isPanning = true;
+      panStart = { x: e.clientX, y: e.clientY };
+    }
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isPanning) return;
+    const dx = (e.clientX - panStart.x) * (viewBox.w / svg.clientWidth);
+    const dy = (e.clientY - panStart.y) * (viewBox.h / svg.clientHeight);
+    viewBox.x -= dx;
+    viewBox.y -= dy;
+    panStart = { x: e.clientX, y: e.clientY };
+    applyViewBox();
+  });
+  window.addEventListener('mouseup', () => { isPanning = false; });
+
+  function zoom(factor) {
+    const cx = viewBox.x + viewBox.w / 2, cy = viewBox.y + viewBox.h / 2;
+    viewBox.w *= factor; viewBox.h *= factor;
+    viewBox.w = Math.max(300, Math.min(1800, viewBox.w));
+    viewBox.h = Math.max(233, Math.min(1400, viewBox.h));
+    viewBox.x = cx - viewBox.w / 2;
+    viewBox.y = cy - viewBox.h / 2;
+    applyViewBox();
+  }
+
+  document.getElementById('zoomIn').addEventListener('click', () => zoom(0.85));
+  document.getElementById('zoomOut').addEventListener('click', () => zoom(1.18));
+  document.getElementById('zoomReset').addEventListener('click', () => {
+    viewBox = { x: 0, y: 0, w: 900, h: 700 };
+    applyViewBox();
+  });
+})();
+</script>
+
+</body>
+</html>
